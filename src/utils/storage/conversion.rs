@@ -22,8 +22,16 @@ impl Into<StoredStates> for RawStoredStates {
             selected_service,
             openai_model,
         } = raw_app_settings;
-        let name_to_configs = raw_agent_configs.name_to_configs.into_iter().map(|(k, v)| (k.into(), v)).collect();
-        let chats = raw_chats.chats.into_iter().map(|c| c.into_chat(&name_to_configs)).collect();
+        let name_to_configs = raw_agent_configs
+            .name_to_configs
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
+        let chats = raw_chats
+            .chats
+            .into_iter()
+            .map(|c| c.into_chat(&name_to_configs))
+            .collect();
         StoredStates {
             run_count,
             customization,
@@ -45,7 +53,7 @@ impl From<StoredStates> for RawStoredStates {
             chats,
             auth,
             selected_service,
-            openai_model
+            openai_model,
         } = value;
         let raw_app_settings = RawAppSettings {
             run_count,
@@ -55,7 +63,10 @@ impl From<StoredStates> for RawStoredStates {
             openai_model,
         };
         let raw_agent_configs = RawAgentConfigs {
-            name_to_configs: name_to_configs.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+            name_to_configs: name_to_configs
+                .into_iter()
+                .map(|(k, v)| (k.into(), v))
+                .collect(),
         };
         let raw_chats = RawChats {
             chats: chats.into_iter().map(|c| c.into()).collect(),
@@ -68,14 +79,24 @@ impl From<StoredStates> for RawStoredStates {
     }
 }
 
-
 impl From<Chat> for RawChat {
     fn from(value: Chat) -> Self {
         let Chat {
-            id, message_manager, topic, date, agents
+            id,
+            message_manager,
+            topic,
+            date,
+            agents,
         } = value;
-        let agents = agents.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
-        let messages = message_manager.messages.into_iter().map(|(k, v)| (k.into(), v)).collect();
+        let agents = agents
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+        let messages = message_manager
+            .messages
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
         Self {
             id,
             messages,
@@ -89,7 +110,11 @@ impl From<Chat> for RawChat {
 impl RawChat {
     pub fn into_chat(self, name_to_configs: &HashMap<AgentName, AgentConfig>) -> Chat {
         let RawChat {
-            id, messages, topic, date, agents
+            id,
+            messages,
+            topic,
+            date,
+            agents,
         } = self;
         let agents = agents
             .into_iter()
@@ -99,16 +124,13 @@ impl RawChat {
 
         Chat {
             id,
-            message_manager: MessageManager {
-                messages,
-            },
+            message_manager: MessageManager { messages },
             topic,
             date,
             agents,
         }
     }
 }
-
 
 impl Into<RawAgentID> for AgentID {
     fn into(self) -> UUIDKey {
@@ -119,9 +141,7 @@ impl Into<RawAgentID> for AgentID {
 impl From<RawAgentID> for AgentID {
     fn from(s: UUIDKey) -> Self {
         let id = Uuid::parse_str(&s).expect("Failed to parse AgentId from String");
-        Self {
-            id,
-        }
+        Self { id }
     }
 }
 
@@ -140,19 +160,22 @@ impl From<RawMessageID> for MessageID {
 
 impl Into<RawAgentInstance> for AgentInstance {
     fn into(self) -> RawAgentInstance {
-        let AgentInstance { id, config, history } = self;
+        let AgentInstance {
+            id,
+            config,
+            history,
+        } = self;
         let AgentConfig { name, .. } = config;
         let history = history.into_iter().map(|id| id.into()).collect();
-        RawAgentInstance {
-            id,
-            name,
-            history,
-        }
+        RawAgentInstance { id, name, history }
     }
 }
 
 impl RawAgentInstance {
-    pub fn into_agent_instance(self, name_to_configs: &HashMap<AgentName, AgentConfig>) -> AgentInstance {
+    pub fn into_agent_instance(
+        self,
+        name_to_configs: &HashMap<AgentName, AgentConfig>,
+    ) -> AgentInstance {
         let RawAgentInstance { id, name, history } = self;
         let config = match name_to_configs.get(&name) {
             Some(config) => config,

@@ -6,13 +6,13 @@ pub use agent_profiles::*;
 pub use chat_history::*;
 pub use icons::*;
 
-use crate::pages::app::{ChatId, StreamingReply};
 use crate::chat::Chat;
+use crate::pages::app::{ChatId, StreamingReply};
 use crate::utils::storage::StoredStates;
 
+pub mod agent_profiles;
 pub mod chat_history;
 pub mod icons;
-pub mod agent_profiles;
 
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,18 +36,25 @@ impl SecondarySidebar {
     }
 }
 
-pub fn LeftSidebar(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || SecondarySidebar::None);
-    let secondary_sidebar = use_shared_state::<SecondarySidebar>(cx).unwrap();
-    let showing_chat_id = use_shared_state::<ChatId>(cx).unwrap();
-    let streaming_reply = use_shared_state::<StreamingReply>(cx).unwrap();
-    let global = use_shared_state::<StoredStates>(cx).unwrap();
-    use_coroutine(cx, |rx| event_handler(rx, secondary_sidebar.to_owned(), showing_chat_id.to_owned(), streaming_reply.to_owned(), global.to_owned()));
-    render! {
-        aside {
-            class: "flex",
+pub fn LeftSidebar() -> Element {
+    use_context_provider(|| SecondarySidebar::None);
+    let secondary_sidebar = use_context::<SecondarySidebar>();
+    let showing_chat_id = use_context::<ChatId>();
+    let streaming_reply = use_context::<StreamingReply>();
+    let global = use_context::<StoredStates>();
+    use_coroutine(|rx| {
+        event_handler(
+            rx,
+            secondary_sidebar.to_owned(),
+            showing_chat_id.to_owned(),
+            streaming_reply.to_owned(),
+            global.to_owned(),
+        )
+    });
+    rsx! {
+        aside { class: "flex",
             IconSidebar {}
-            match *secondary_sidebar.read() {
+            match secondary_sidebar {
                 SecondarySidebar::History => rsx! {
                     ChatHistorySidebar {}
                 },
@@ -56,18 +63,19 @@ pub fn LeftSidebar(cx: Scope) -> Element {
                 },
                 SecondarySidebar::None => rsx! {
                     div {}
-                }
+                },
             }
         }
     }
 }
 
-
-async fn event_handler(mut rx: UnboundedReceiver<LeftSidebarEvent>,
-                       secondary_sidebar: UseSharedState<SecondarySidebar>,
-                       showing_chat_id: UseSharedState<ChatId>,
-                       streaming_reply: UseSharedState<StreamingReply>,
-                       global: UseSharedState<StoredStates>) {
+async fn event_handler(
+    mut rx: UnboundedReceiver<LeftSidebarEvent>,
+    secondary_sidebar: UseSharedState<SecondarySidebar>,
+    showing_chat_id: UseSharedState<ChatId>,
+    streaming_reply: UseSharedState<StreamingReply>,
+    global: UseSharedState<StoredStates>,
+) {
     while let Some(event) = rx.next().await {
         match event {
             LeftSidebarEvent::EnableSecondary(secondary) => {
@@ -109,4 +117,3 @@ async fn event_handler(mut rx: UnboundedReceiver<LeftSidebarEvent>,
         }
     }
 }
-

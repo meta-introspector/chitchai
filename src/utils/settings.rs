@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub enum GPTService {
@@ -26,28 +26,26 @@ impl OpenAIModel {
     }
 
     pub fn gpt35_models() -> &'static [OpenAIModel] {
-        &[
-            OpenAIModel::GPT35,
-            OpenAIModel::GPT35_16k,
-        ]
+        &[OpenAIModel::GPT35, OpenAIModel::GPT35_16k]
     }
 
     pub fn gpt4_models() -> &'static [OpenAIModel] {
-        &[
-            OpenAIModel::GPT4,
-            OpenAIModel::GPT4_32k,
-        ]
+        &[OpenAIModel::GPT4, OpenAIModel::GPT4_32k]
     }
 }
 
 impl Display for OpenAIModel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            OpenAIModel::GPT35 => "gpt-3.5-turbo",
-            OpenAIModel::GPT35_16k => "gpt-3.5-turbo-16k",
-            OpenAIModel::GPT4 => "gpt-4",
-            OpenAIModel::GPT4_32k => "gpt-4-32k",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                OpenAIModel::GPT35 => "gpt-3.5-turbo",
+                OpenAIModel::GPT35_16k => "gpt-3.5-turbo-16k",
+                OpenAIModel::GPT4 => "gpt-4",
+                OpenAIModel::GPT4_32k => "gpt-4-32k",
+            }
+        )
     }
 }
 

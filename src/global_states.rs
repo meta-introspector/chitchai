@@ -1,0 +1,1 @@
+// TODO: manage global states in a more structured way here

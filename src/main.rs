@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 use log::Level;
 
 use chitchai::pages::*;
@@ -18,27 +17,22 @@ enum Route {
     PageNotFound { route: Vec<String> },
 }
 
-
-#[inline_props]
-fn PageNotFound(cx: Scope, route: Vec<String>) -> Element {
-    render! {
+#[component]
+fn PageNotFound(route: Vec<String>) -> Element {
+    rsx! {
         h1 { "Page not found" }
         p { "We are terribly sorry, but the page you requested doesn't exist." }
-        pre {
-            color: "red",
-            "log:\nattemped to navigate to: {route:?}"
-        }
+        pre { color: "red", "log:\nattemped to navigate to: {route:?}" }
     }
 }
 
-
-fn AppRouter(cx: Scope) -> Element {
-    render! {
+fn Main() -> Element {
+    rsx! {
         Router::<Route> {}
     }
 }
 
 fn main() {
     console_log::init_with_level(Level::Debug).unwrap();
-    dioxus_web::launch(AppRouter);
+    launch(Main);
 }

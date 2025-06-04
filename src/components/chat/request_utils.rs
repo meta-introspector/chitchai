@@ -3,15 +3,17 @@ use std::sync::{Arc, Mutex};
 use dioxus::prelude::*;
 use futures::future::join_all;
 use futures_util::StreamExt;
-use transprompt::async_openai::types::{ChatCompletionRequestMessage, CreateChatCompletionRequestArgs};
+use transprompt::async_openai_wasm::types::{
+    ChatCompletionRequestMessage, CreateChatCompletionRequestArgs,
+};
 use uuid::Uuid;
 
 use crate::agents::AgentID;
-use crate::pages::app::{AuthedClient, ChatId, StreamingReply};
 use crate::chat::{Chat, LinkedChatHistory, MessageID, MessageManager};
 use crate::components::chat::Request;
-use crate::utils::{assistant_msg, EMPTY, user_msg};
+use crate::pages::app::{AuthedClient, ChatId, StreamingReply};
 use crate::utils::storage::StoredStates;
+use crate::utils::{assistant_msg, user_msg, EMPTY};
 
 pub(super) fn find_chat_idx_by_id(chats: &Vec<Chat>, id: &Uuid) -> usize {
     for (idx, c) in chats.iter().enumerate() {
@@ -22,10 +24,11 @@ pub(super) fn find_chat_idx_by_id(chats: &Vec<Chat>, id: &Uuid) -> usize {
     unreachable!("Cannot find a chat, should not be since deleting is not implemented yet")
 }
 
-
 #[inline]
-fn map_chat_messages(chat_msgs: &LinkedChatHistory,
-                     message_manager: &MessageManager) -> Vec<ChatCompletionRequestMessage> {
+fn map_chat_messages(
+    chat_msgs: &LinkedChatHistory,
+    message_manager: &MessageManager,
+) -> Vec<ChatCompletionRequestMessage> {
     chat_msgs
         .iter()
         .map(|msg_id| message_manager.get(msg_id).unwrap().msg.clone())
@@ -33,15 +36,8 @@ fn map_chat_messages(chat_msgs: &LinkedChatHistory,
 }
 
 #[inline]
-fn push_history(chat: &mut Chat,
-                agent_id: &AgentID,
-                msg_id: MessageID) {
-    chat
-        .agents
-        .get_mut(agent_id)
-        .unwrap()
-        .history
-        .push(msg_id)
+fn push_history(chat: &mut Chat, agent_id: &AgentID, msg_id: MessageID) {
+    chat.agents.get_mut(agent_id).unwrap().history.push(msg_id)
 }
 
 #[inline]
@@ -53,12 +49,14 @@ fn linearize_replies(mut replies: Vec<(AgentID, MessageID, usize)>) -> LinkedCha
         .collect()
 }
 
-async fn post_agent_request(assistant_id: AgentID,
-                            user_agent_id: AgentID,
-                            chat_idx: usize,
-                            authed_client: UseSharedState<AuthedClient>,
-                            order: Arc<Mutex<usize>>,
-                            global: UseSharedState<StoredStates>) -> (AgentID, MessageID, usize) {
+async fn post_agent_request(
+    assistant_id: AgentID,
+    user_agent_id: AgentID,
+    chat_idx: usize,
+    authed_client: UseSharedState<AuthedClient>,
+    order: Arc<Mutex<usize>>,
+    global: UseSharedState<StoredStates>,
+) -> (AgentID, MessageID, usize) {
     let mut global_mut = global.write();
     let chat = &global_mut.chats[chat_idx];
     // get the context to send to AI
@@ -67,7 +65,9 @@ async fn post_agent_request(assistant_id: AgentID,
     let agent_name = agent.get_name();
     // update history, inserting assistant reply that is empty initially
     let chat = &mut global_mut.chats[chat_idx];
-    let assistant_reply_id = chat.message_manager.insert(assistant_msg(EMPTY, agent_name));
+    let assistant_reply_id = chat
+        .message_manager
+        .insert(assistant_msg(EMPTY, agent_name));
     push_history(chat, &assistant_id, assistant_reply_id);
     push_history(chat, &user_agent_id, assistant_reply_id);
     // drop write lock before await point
@@ -78,11 +78,13 @@ async fn post_agent_request(assistant_id: AgentID,
         .as_ref()
         .unwrap()
         .chat()
-        .create_stream(CreateChatCompletionRequestArgs::default()
-            .model("gpt-3.5-turbo-0613") // TODO: use model when it's OpenAI Service
-            .messages(messages_to_send)
-            .build()
-            .expect("creating request failed"))
+        .create_stream(
+            CreateChatCompletionRequestArgs::default()
+                .model("gpt-3.5-turbo-0613") // TODO: use model when it's OpenAI Service
+                .messages(messages_to_send)
+                .build()
+                .expect("creating request failed"),
+        )
         .await
         .expect("creating stream failed");
     while let Some(chunk) = stream.next().await {
@@ -93,8 +95,7 @@ async fn post_agent_request(assistant_id: AgentID,
                     continue;
                 }
                 let mut global_mut = global.write();
-                let assistant_reply_msg = global_mut
-                    .chats[chat_idx]
+                let assistant_reply_msg = global_mut.chats[chat_idx]
                     .message_manager
                     .get_mut(&assistant_reply_id)
                     .unwrap();
@@ -109,16 +110,16 @@ async fn post_agent_request(assistant_id: AgentID,
     (assistant_id, assistant_reply_id, got_order)
 }
 
-
-pub(super) async fn handle_request(mut rx: UnboundedReceiver<Request>,
-                                   chat_id: UseSharedState<ChatId>,
-                                   global: UseSharedState<StoredStates>,
-                                   authed_client: UseSharedState<AuthedClient>,
-                                   streaming_reply: UseSharedState<StreamingReply>) {
+pub(super) async fn handle_request(
+    mut rx: UnboundedReceiver<Request>,
+    chat_id: UseSharedState<ChatId>,
+    global: UseSharedState<StoredStates>,
+    authed_client: UseSharedState<AuthedClient>,
+    streaming_reply: UseSharedState<StreamingReply>,
+) {
     while let Some(Request(request)) = rx.next().await {
-        let chat_id = chat_id.read().0;
         log::info!("chat id = {}", chat_id);
-        if authed_client.read().is_none() {
+        if authed_client.is_none() {
             // TODO: handle this error and make a toast to notify user
             log::error!("authed_client is None");
             continue;
@@ -134,10 +135,11 @@ pub(super) async fn handle_request(mut rx: UnboundedReceiver<Request>,
         let assistant_agent_ids: Vec<AgentID> = chat.assistant_agent_ids();
         // create user message and register them to chat manager
         let user_query = user_msg(request.as_str(), user_agent.get_name());
-        let user_msg_id = global_mut.chats[chat_idx].message_manager.insert(user_query.clone());
+        let user_msg_id = global_mut.chats[chat_idx]
+            .message_manager
+            .insert(user_query.clone());
         // update history, inserting user request
-        global_mut
-            .chats[chat_idx]
+        global_mut.chats[chat_idx]
             .agents
             .iter_mut()
             .for_each(|(_, agent)| agent.history.push(user_msg_id));
@@ -146,22 +148,26 @@ pub(super) async fn handle_request(mut rx: UnboundedReceiver<Request>,
         drop(global_mut);
         streaming_reply.write().0 = true;
         let order = Arc::new(Mutex::new(0_usize));
-        let results = join_all(
-            assistant_agent_ids
-                .iter()
-                .map(|assistant_id| post_agent_request(*assistant_id, user_agent_id, chat_idx, authed_client.to_owned(), order.clone(), global.to_owned()))
-        ).await;
+        let results = join_all(assistant_agent_ids.iter().map(|assistant_id| {
+            post_agent_request(
+                *assistant_id,
+                user_agent_id,
+                chat_idx,
+                authed_client.to_owned(),
+                order.clone(),
+                global.to_owned(),
+            )
+        }))
+        .await;
         let replies = linearize_replies(results);
         // add replies to history of each assistant
         let mut global_mut = global.write();
         let chat = &mut global_mut.chats[chat_idx];
-        assistant_agent_ids
-            .iter()
-            .for_each(|agent_id| {
-                for msg_id in replies.iter() {
-                    push_history(chat, agent_id, *msg_id);
-                }
-            });
+        assistant_agent_ids.iter().for_each(|agent_id| {
+            for msg_id in replies.iter() {
+                push_history(chat, agent_id, *msg_id);
+            }
+        });
         drop(global_mut);
         // stage assistant reply into local storage
         global.read().save();

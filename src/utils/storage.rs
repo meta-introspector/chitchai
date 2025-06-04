@@ -10,8 +10,8 @@ use crate::utils::auth::Auth;
 use crate::utils::customization::Customization;
 use crate::utils::settings::{GPTService, OpenAIModel};
 
-pub(crate) mod schema;
 pub(crate) mod conversion;
+pub(crate) mod schema;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StoredStates {
@@ -24,7 +24,6 @@ pub struct StoredStates {
     pub openai_model: Option<OpenAIModel>,
 }
 
-
 impl StoredStates {
     pub fn get_or_init() -> Self {
         RawStoredStates::get_or_init()
@@ -35,7 +34,6 @@ impl StoredStates {
         saved_storage.save();
     }
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub(crate) struct Announcements {

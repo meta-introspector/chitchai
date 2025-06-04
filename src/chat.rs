@@ -4,8 +4,8 @@ use transprompt::utils::llm::openai::ChatMsg;
 use uuid::Uuid;
 
 use crate::agents::{AgentConfig, AgentID, AgentInstance, AgentName, AgentType};
-use crate::utils::{Instructions, sys_msg};
 use crate::utils::datetime::DatetimeString;
+use crate::utils::{sys_msg, Instructions};
 
 pub type LinkedChatHistory = Vec<MessageID>;
 
@@ -47,7 +47,6 @@ impl MessageManager {
     }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct Chat {
     pub(crate) id: Uuid,
@@ -63,7 +62,9 @@ impl Chat {
     }
 
     pub fn default_chat_and_configs() -> (Self, HashMap<AgentName, AgentConfig>) {
-        let Instructions { agent_config: configs } = toml::from_str(include_str!("../default_assistants.toml")).unwrap();
+        let Instructions {
+            agent_config: configs,
+        } = toml::from_str(include_str!("../default_assistants.toml")).unwrap();
         let mut name_to_configs = HashMap::new();
         let mut message_manager = MessageManager::default();
         let mut agents = HashMap::new();
@@ -100,8 +101,7 @@ impl Chat {
     }
 
     pub fn user_agent_ids<B: FromIterator<AgentID>>(&self) -> B {
-        self
-            .agents
+        self.agents
             .iter()
             .filter_map(|(id, agent)| {
                 if agent.config.agent_type == AgentType::User {
@@ -114,8 +114,7 @@ impl Chat {
     }
 
     pub fn assistant_agent_ids<B: FromIterator<AgentID>>(&self) -> B {
-        self
-            .agents
+        self.agents
             .iter()
             .filter_map(|(id, agent)| {
                 if let AgentType::Assistant { .. } = agent.config.agent_type {

@@ -9,5 +9,5 @@ pub use left_sidebar::*;
 pub use setting_sidebar::*;
 
 mod chat;
-mod setting_sidebar;
 mod left_sidebar;
+mod setting_sidebar;

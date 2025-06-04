@@ -8,7 +8,7 @@ pub struct Customization {
 impl Default for Customization {
     fn default() -> Self {
         Self {
-            waiting_icons: vec![".".to_string(), "..".to_string(), "...".to_string()]
+            waiting_icons: vec![".".to_string(), "..".to_string(), "...".to_string()],
         }
     }
 }

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use gloo_storage::{LocalStorage, Storage};
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use transprompt::utils::llm::openai::ChatMsg;
 use uuid::Uuid;
 
@@ -44,7 +44,11 @@ pub(crate) trait StoredState: Serialize + DeserializeOwned {
     fn save(self) {
         match LocalStorage::set(Self::STORE_KEY, self) {
             Ok(_) => log::info!("Saved StoredState with key {}", Self::STORE_KEY),
-            Err(e) => log::error!("Error when saving StoredState with key {}: {}",  Self::STORE_KEY, e),
+            Err(e) => log::error!(
+                "Error when saving StoredState with key {}: {}",
+                Self::STORE_KEY,
+                e
+            ),
         }
     }
 }
@@ -119,7 +123,10 @@ impl StoredState for RawAgentConfigs {
             Err(e) => {
                 log::error!("error on init RawAgentConfigs: {}", e);
                 let (_default_chat, name_to_configs) = Chat::default_chat_and_configs();
-                let name_to_configs = name_to_configs.into_iter().map(|(k, v)| (k.into(), v)).collect();
+                let name_to_configs = name_to_configs
+                    .into_iter()
+                    .map(|(k, v)| (k.into(), v))
+                    .collect();
                 let raw_agent_configs = RawAgentConfigs { name_to_configs };
                 raw_agent_configs.clone().save();
                 raw_agent_configs
@@ -127,7 +134,6 @@ impl StoredState for RawAgentConfigs {
         }
     }
 }
-
 
 pub(crate) struct RawStoredStates {
     pub raw_app_settings: RawAppSettings,
@@ -140,8 +146,16 @@ impl RawStoredStates {
         let raw_app_settings = RawAppSettings::get_or_init();
         let raw_chats = RawChats::get_or_init();
         let raw_agent_configs = RawAgentConfigs::get_or_init();
-        let name_to_configs = raw_agent_configs.name_to_configs.into_iter().map(|(k, v)| (k.into(), v)).collect();
-        let chats = raw_chats.chats.into_iter().map(|c| c.into_chat(&name_to_configs)).collect();
+        let name_to_configs = raw_agent_configs
+            .name_to_configs
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
+        let chats = raw_chats
+            .chats
+            .into_iter()
+            .map(|c| c.into_chat(&name_to_configs))
+            .collect();
         let RawAppSettings {
             run_count,
             customization,

@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::chat::{LinkedChatHistory, MessageManager};
 use crate::prompt_engineer::prompt_templates::ASSISTANT_SYS_PROMPT_TEMPLATE;
-use crate::utils::{EMPTY, sys_msg};
+use crate::utils::{sys_msg, EMPTY};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentName {
@@ -29,16 +29,12 @@ impl AgentName {
     }
 }
 
-
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AgentType {
     User,
-    Assistant {
-        instructions: String,
-    },
+    Assistant { instructions: String },
 }
-
 
 impl AgentType {
     pub const fn str(&self) -> &'static str {
@@ -56,9 +52,7 @@ pub struct AgentID {
 
 impl AgentID {
     pub fn new() -> Self {
-        Self {
-            id: Uuid::new_v4(),
-        }
+        Self { id: Uuid::new_v4() }
     }
 }
 
@@ -110,9 +104,11 @@ impl AgentConfig {
         }
     }
 
-    pub fn new_assistant(name: AgentName,
-                         instructions: impl Into<String>,
-                         description: impl Into<String>) -> Self {
+    pub fn new_assistant(
+        name: AgentName,
+        instructions: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
         let instructions = instructions.into();
         Self {
             name,
@@ -127,11 +123,14 @@ impl AgentConfig {
             AgentType::Assistant { instructions } => {
                 PromptTemplate::new(ASSISTANT_SYS_PROMPT_TEMPLATE)
                     .construct_prompt()
-                    .fill("name_instructions", match &self.name {
-                        AgentName::UserDefault => EMPTY,
-                        AgentName::AssistantDefault => EMPTY,
-                        AgentName::Named(name) => format!("Your name is {}.", name),
-                    })
+                    .fill(
+                        "name_instructions",
+                        match &self.name {
+                            AgentName::UserDefault => EMPTY,
+                            AgentName::AssistantDefault => EMPTY,
+                            AgentName::Named(name) => format!("Your name is {}.", name),
+                        },
+                    )
                     .fill("instructions", instructions.clone())
                     .complete()
                     .expect("Failed to complete sys_prompt")
