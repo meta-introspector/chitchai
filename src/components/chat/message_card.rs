@@ -105,7 +105,8 @@ pub fn MarkdownTextBox<'a>(cx: Scope<'a, MarkdownTextBoxProps>) -> Element<'a> {
     rsx! {
         div {
             class: "flex min-h-[85px] rounded-b-xl rounded-tl-xl bg-slate-50 px-4 dark:bg-slate-800 sm:min-h-0 sm:max-w-md md:max-w-2xl",
-	    msg.to_string()
+	    "TODO"
+//	    msg.to_string()
 //            article {
 //		content : msg.to_string(), // Ensure String type
 //                Markdown {
